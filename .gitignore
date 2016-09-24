@@ -1,0 +1,11 @@
+.idea
+*.sqlite*
+*.pyc
+__pycache__
+env
+static
+nectar
+stats
+.coverage
+.cache
+
