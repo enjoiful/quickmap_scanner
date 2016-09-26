@@ -1,11 +1,10 @@
 import requests
 import json
-import time
-
+from datetime import datetime, timedelta
 import time
 
 base_url = 'https://api.quickmap.us/api/pokemons'
-slack_url = 'xxxx'
+slack_url = 'xyz'
 
 north_beach_locations = {
     'fort_mason': '?filter[where][and][0][latitude][gt]=37.79900966958006&filter[where][and][1][latitude][lt]=37.81697597526245&filter[where][and][2][longitude][gt]=-122.44060371438971&filter[where][and][3][longitude][lt]=-122.41786355606924',
@@ -49,6 +48,8 @@ RARE_POKEMON_CONST = [
         136: 'Flareon'
     }, {
         143: 'Snorlax'
+    }, {
+        150: 'Mewtwo'
     }]
 
 
@@ -65,6 +66,7 @@ def get_spawned_rare_pokemon(pokemon):
         for rare_mon in RARE_POKEMON_CONST:
             if list(rare_mon.keys())[0] == mon['pokemonId']:
                 mon['pokemonName'] = list(rare_mon.values())[0]
+                mon['disappearTime'] = mon['disappearTime'].replace('.000Z', '')
                 spawned_rare.append(mon)
     return spawned_rare
 
@@ -90,11 +92,19 @@ def send_slack_message(msg):
     body = {'text': str(msg)}
     requests.post(slack_url, data=json.dumps(body))
 
+saved_pokemon = []
+
 while True:
 
     spawned_rare_pokemon = get_all_spawned_rare_pokemon(north_beach_locations)
 
     for spawned_rare_mon in spawned_rare_pokemon:
-        send_slack_message(str(spawned_rare_mon['pokemonName']) + ' spawned')
+        uniq_mon = list(filter(lambda saved_mon: saved_mon['encounterId'] == spawned_rare_mon['encounterId'], saved_pokemon))
+        if len(uniq_mon) == 0:
+            print('Spawned pokemon:', spawned_rare_mon)
+            date_object = datetime.strptime(spawned_rare_mon['disappearTime'], '%Y-%m-%dT%H:%M:%S')
+            date_object = date_object + timedelta(hours=-7)
+            send_slack_message(str(spawned_rare_mon['pokemonName']) + ' spawned' + '\nhttps://quickmap.us/#' + str(spawned_rare_mon['latitude']) + ',' + str(spawned_rare_mon['longitude']) + '\nDisseapers at ' + date_object.strftime('%H:%M:%S %p'))
+            saved_pokemon.append(spawned_rare_mon)
 
     time.sleep(180)
